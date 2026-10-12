@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>rive-city</title>
+    <link rel="icon" href="/_player/favicon.ico" />
+    <link rel="stylesheet" href="/_player/hosted.css" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://unpkg.com" crossorigin />
+    <link rel="preload" href="/file.riv" as="fetch" crossorigin />
+  </head>
+  <body>
+    <div id="rive-stage">
+      <canvas data-src="/file.riv"></canvas>
+    </div>
+    <div id="rive-status" role="status" aria-live="polite">
+      <div class="spinner"></div>
+      <p class="message">Loading</p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.x.x/rive.js"></script>
+    <script src="/_player/hosted.js"></script>
+  </body>
+</html>

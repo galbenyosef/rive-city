@@ -1,0 +1,37 @@
+{
+  "start": "https://rive-city-j6lc8r.uat.rive.to/",
+  "origin": "https://rive-city-j6lc8r.uat.rive.to",
+  "gated": false,
+  "sessionRenewal": "none",
+  "requests": 8,
+  "fetched": 6,
+  "bytes": 29657691,
+  "paths": [
+    "index.html",
+    "_player/hosted.js",
+    "_player/hosted.css",
+    "_player/favicon.ico",
+    "_player/drawer.riv",
+    "file.riv"
+  ],
+  "unresolved": [],
+  "unreachable": [],
+  "external": [
+    {
+      "url": "https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.x.x/rive.js",
+      "note": "CDN Rive WebGL2 runtime script loaded by index.html -> stays CDN per the standing vendor rule (not backfilled into the capture); resolves to 559005 B today"
+    },
+    {
+      "url": "https://rive.app/",
+      "note": "outbound link only — opened by the drawer build button (window.open), never fetched"
+    },
+    {
+      "url": "https://unpkg.com",
+      "note": "preconnect hint only in index.html — nothing is fetched from it"
+    }
+  ],
+  "notes": [
+    "runtime fetches confirmed via an opencli browser network log while the player booted: GET /file.riv (200), GET /_player/drawer.riv (200), POST /_v?d=desktop (204 analytics beacon), plus the five static captures; blob: URLs seen in the log are in-memory decoded images from the .riv, not network files",
+    "origin is a rive.to UAT deployment — ephemeral; it may vanish or change without notice (drift probe tools/update.mjs documents changes while it lives)"
+  ]
+}

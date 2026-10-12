@@ -1,0 +1,30 @@
+{
+  "generated": "2026-10-12T19:27:00.301Z",
+  "origin": "https://rive-city-j6lc8r.uat.rive.to",
+  "files": {
+    "_player/drawer.riv": {
+      "bytes": 9513,
+      "sha256": "0c848dde5e43c057247fde266d1833742cb71f3ba55d2452edf988a209388a2c"
+    },
+    "_player/favicon.ico": {
+      "bytes": 15086,
+      "sha256": "7718d85c49bd203f0963146e4ef2d22dcf18a946f0cf624869beb98b5707dac7"
+    },
+    "_player/hosted.css": {
+      "bytes": 5903,
+      "sha256": "f4a9db2722ca7ee1461171a95e4349d61740101f46d8176689a7dcfb94ab8cd2"
+    },
+    "_player/hosted.js": {
+      "bytes": 10132,
+      "sha256": "b2395675ca97ace8b40e0fe39a31cc441cdb813f432614a8e3125ad166a3ef7d"
+    },
+    "file.riv": {
+      "bytes": 29616149,
+      "sha256": "07033632d0ce342eecd7d2b872ed611fb056335c5b78c3484806d4e147e8cc04"
+    },
+    "index.html": {
+      "bytes": 908,
+      "sha256": "deb165685c360c699ca6f52da5b2dd77f8b74e4f41a426e7fead24aaba2ad20f"
+    }
+  }
+}
