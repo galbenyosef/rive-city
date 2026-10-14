@@ -1,8 +1,8 @@
 {
   "project": "rive-city",
   "kind": "statement-aligned-slices",
-  "defaultFile": "src/_player__hosted-01.js",
-  "note": "RIVE CITY (https://rive-city-j6lc8r.uat.rive.to/) is capture-class: a Rive hosted-player deployment (rive.to UAT, ephemeral) whose whole app is one minified IIFE (_player/hosted.js — the player host/glue), plus two binary Rive scene payloads (file.riv — the city artboard — and _player/drawer.riv — the controls artboard), the player stylesheet and the favicon. §0.4 fork-over-mirror was checked on 2026-10-12: the page and its JS carry no public source-repo reference (the only outbound link is https://rive.app/ from the drawer's build button), so the mirror stands. The CDN dependency https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.x.x/rive.js stays CDN (standing vendor rule — a CDN dependency is not backfilled into the capture); it is documented here and in README.md. Derived pipeline: capture → pinned prettier 3.9.6 (module API, default options, single pass verified idempotent — never the CLI: it respects .gitignore and can silently echo its input) → readable/<name>.pretty.js|css per captured JS/CSS file (capture root == repo root — DISK_PREFIX \"\" — nested dirs flattened with __; every pretty provably NOT byte-identical to its capture source) → statement-aligned slices src/<name>-NN.js of the IIFE BODY (the whole file is one (function(){…})() expression, so the top-level declaration boundaries are the body's statements; wrapper-open and wrapper-close lines are non-standalone and are indexed as skipped sections). Windows are ~100-140 lines — a recorded divergence from the fleet's 250-350 window, because the whole app is 496 readable lines and the larger window would yield only two slices. Every slice parses standalone under `node --input-type=module --check -` and round-trips byte-exact to its recorded readable line range. Binary payloads (file.riv, _player/drawer.riv, _player/favicon.ico) are hashed notRendered records — no pretty/slice pass. Stylesheet rule — _player/hosted.css is wholeFile. Inline <script>/<style> scan: index.html references external scripts only (the CDN rive.js and /_player/hosted.js) — zero inline content blocks, so there are no *-inline-N twins and no index-inline-map.json. Identifiers in src/ are the bundle's own minified names — the rename campaign (PLAN §5) is recorded as an open task in README.md, not claimed here. Capture bytes are untouched by everything above; re-cut with `node tools/derive.mjs` after any capture refresh. `node tools/audit.js` is the gate.",
+  "defaultFile": "src/_player/hosted-01.js",
+  "note": "RIVE CITY (https://rive-city-j6lc8r.uat.rive.to/) is capture-class: a Rive hosted-player deployment (rive.to UAT, ephemeral) whose whole app is one minified IIFE (_player/hosted.js — the player host/glue), plus two binary Rive scene payloads (file.riv — the city artboard — and _player/drawer.riv — the controls artboard), the player stylesheet and the favicon. §0.4 fork-over-mirror was checked on 2026-10-12: the page and its JS carry no public source-repo reference (the only outbound link is https://rive.app/ from the drawer's build button), so the mirror stands. The CDN dependency https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.x.x/rive.js stays CDN (standing vendor rule — a CDN dependency is not backfilled into the capture); it is documented here and in README.md. Derived pipeline: capture → pinned prettier 3.9.6 (module API, default options, single pass verified idempotent — never the CLI: it respects .gitignore and can silently echo its input) → readable/<served path>.pretty.js|css per captured JS/CSS file (capture root == repo root — DISK_PREFIX \"\" — so the served path IS the disk path and the derived layers MIRROR it: real subdirectories + served filename kept; every pretty provably NOT byte-identical to its capture source) → statement-aligned slices src/<served path>-NN.js of the IIFE BODY (the whole file is one (function(){…})() expression, so the top-level declaration boundaries are the body's statements; wrapper-open and wrapper-close lines are non-standalone and are indexed as skipped sections). Windows are ~100-140 lines — a recorded divergence from the fleet's 250-350 window, because the whole app is 496 readable lines and the larger window would yield only two slices. Every slice parses standalone under `node --input-type=module --check -` and round-trips byte-exact to its recorded readable line range through the recorded semantic rename map (rename-map.json, re-applied on every re-cut; apply -> recover -> derive -> gates). Binary payloads (file.riv, _player/drawer.riv, _player/favicon.ico) are hashed notRendered records — no pretty/slice pass. Stylesheet rule — _player/hosted.css is wholeFile. Inline <script>/<style> scan: index.html references external scripts only (the CDN rive.js and /_player/hosted.js) — zero inline content blocks, so there are no *-inline-N twins and no index-inline-map.json. src/ identifiers are semantic names from the PLAN §5 rename campaign where the bytes allow (tools/names.json -> tools/apply-names.mjs -> rename-map.json); binary .riv payloads stay hashed records. Capture bytes are untouched by everything above; re-cut with `node tools/derive.mjs` after any capture refresh. `node tools/audit.js` is the gate.",
   "renderOptions": {
     "_default": "prettier 3.9.6, module API, default options, single pass (re-format verified idempotent at derive time) — never the CLI: it respects .gitignore and can silently echo its input",
     "js": "parser babel, no plugins",
@@ -18,9 +18,16 @@
     "notRendered": 3,
     "note": "no inline <script>/<style> content blocks in the captured entry document — external script references only (CDN rive.js + /_player/hosted.js), so there are no *-inline-N twins and no readable/index-inline-map.json"
   },
+  "rename": {
+    "map": "rename-map.json",
+    "present": false,
+    "flatNames": 0,
+    "scopedOccurrences": 0,
+    "note": "Semantic renames recovered from the committed slices (tools/recover-scoped-map.mjs) and re-applied on every re-cut (tools/engine/rename-layer.mjs applyRecordedMap); authored in tools/names.json and applied by tools/apply-names.mjs. `files` is a word-boundary map, `scoped` addresses token indices. Binary .riv payloads are not code and stay hashed notRendered records; the CDN rive.js runtime is not captured."
+  },
   "sources": [
     {
-      "sourceFile": "readable/_player__hosted.pretty.js",
+      "sourceFile": "readable/_player/hosted.pretty.js",
       "capture": "_player/hosted.js",
       "captureKind": "file",
       "captureSha256": "b2395675ca97ace8b40e0fe39a31cc441cdb813f432614a8e3125ad166a3ef7d",
@@ -29,12 +36,13 @@
       "prettyBytes": 15429,
       "prettyPasses": 1,
       "idempotent": true,
-      "tag": "_player__hosted",
+      "tag": "_player/hosted",
       "slices": 5,
+      "renameBindings": {},
       "derived": "readable + 5 statement-aligned slice(s) of the IIFE body + 2 skipped wrapper section(s)"
     },
     {
-      "sourceFile": "readable/_player__hosted.pretty.css",
+      "sourceFile": "readable/_player/hosted.pretty.css",
       "capture": "_player/hosted.css",
       "captureKind": "file",
       "captureSha256": "f4a9db2722ca7ee1461171a95e4349d61740101f46d8176689a7dcfb94ab8cd2",
@@ -43,83 +51,83 @@
       "prettyBytes": 5903,
       "prettyPasses": 1,
       "idempotent": true,
-      "tag": "_player__hosted",
+      "tag": "_player/hosted",
       "slices": 0,
       "derived": "readable only (stylesheet, wholeFile)"
     }
   ],
   "sections": [
     {
-      "file": "_player__hosted-iife-open.js",
+      "file": "_player/hosted-iife-open.js",
       "skipped": true,
-      "title": "_player__hosted — IIFE opener + \"use strict\" (not sliced)",
-      "desc": "Lines 1-2 of readable/_player__hosted.pretty.js. The IIFE opener `(function () {` and its `\"use strict\";` directive — non-standalone as a slice (the opener is an unterminated function expression), so it is indexed only; the body's declarations are the slices.",
+      "title": "_player/hosted — IIFE opener + \"use strict\" (not sliced)",
+      "desc": "Lines 1-2 of readable/_player/hosted.pretty.js. The IIFE opener `(function () {` and its `\"use strict\";` directive — non-standalone as a slice (the opener is an unterminated function expression), so it is indexed only; the body's declarations are the slices.",
       "startLine": 1,
       "endLine": 2,
-      "sourceFile": "readable/_player__hosted.pretty.js",
+      "sourceFile": "readable/_player/hosted.pretty.js",
       "firstLine": "(function () {",
       "lastLine": "  \"use strict\";"
     },
     {
-      "file": "_player__hosted-01.js",
-      "title": "_player__hosted 01 — distance",
+      "file": "_player/hosted-01.js",
+      "title": "_player/hosted 01 — distance",
       "desc": "Lines 3-94. Markers: distance(5), location(4).",
       "startLine": 3,
       "endLine": 94,
-      "sourceFile": "readable/_player__hosted.pretty.js"
+      "sourceFile": "readable/_player/hosted.pretty.js"
     },
     {
-      "file": "_player__hosted-02.js",
-      "title": "_player__hosted 02 — classlist",
+      "file": "_player/hosted-02.js",
+      "title": "_player/hosted 02 — classlist",
       "desc": "Lines 95-224. Markers: classlist(12), addeventlistener(10).",
       "startLine": 95,
       "endLine": 224,
-      "sourceFile": "readable/_player__hosted.pretty.js"
+      "sourceFile": "readable/_player/hosted.pretty.js"
     },
     {
-      "file": "_player__hosted-03.js",
-      "title": "_player__hosted 03 — classlist",
+      "file": "_player/hosted-03.js",
+      "title": "_player/hosted 03 — classlist",
       "desc": "Lines 225-331. Markers: classlist(8), remove(8).",
       "startLine": 225,
       "endLine": 331,
-      "sourceFile": "readable/_player__hosted.pretty.js"
+      "sourceFile": "readable/_player/hosted.pretty.js"
     },
     {
-      "file": "_player__hosted-04.js",
-      "title": "_player__hosted 04 — addeventlistener",
+      "file": "_player/hosted-04.js",
+      "title": "_player/hosted 04 — addeventlistener",
       "desc": "Lines 332-453. Markers: addeventlistener(4), code(4).",
       "startLine": 332,
       "endLine": 453,
-      "sourceFile": "readable/_player__hosted.pretty.js"
+      "sourceFile": "readable/_player/hosted.pretty.js"
     },
     {
-      "file": "_player__hosted-05.js",
-      "title": "_player__hosted 05 — addeventlistener",
+      "file": "_player/hosted-05.js",
+      "title": "_player/hosted 05 — addeventlistener",
       "desc": "Lines 454-494. Markers: addeventlistener(3), matchmedia(2).",
       "startLine": 454,
       "endLine": 494,
-      "sourceFile": "readable/_player__hosted.pretty.js"
+      "sourceFile": "readable/_player/hosted.pretty.js"
     },
     {
-      "file": "_player__hosted-iife-close.js",
+      "file": "_player/hosted-iife-close.js",
       "skipped": true,
-      "title": "_player__hosted — IIFE closer (not sliced)",
-      "desc": "Lines 495-495 of readable/_player__hosted.pretty.js. The IIFE invocation closer `})();` — non-standalone (it closes the wrapper opened on line 1), so it is indexed only.",
+      "title": "_player/hosted — IIFE closer (not sliced)",
+      "desc": "Lines 495-495 of readable/_player/hosted.pretty.js. The IIFE invocation closer `})();` — non-standalone (it closes the wrapper opened on line 1), so it is indexed only.",
       "startLine": 495,
       "endLine": 495,
-      "sourceFile": "readable/_player__hosted.pretty.js",
+      "sourceFile": "readable/_player/hosted.pretty.js",
       "firstLine": "})();",
       "lastLine": "})();"
     },
     {
-      "file": "_player__hosted.css",
+      "file": "_player/hosted.css",
       "wholeFile": true,
-      "title": "_player__hosted — stylesheet (whole-file, never sliced)",
-      "desc": "Lines 1-269 of readable/_player__hosted.pretty.css. Whole-file (stylesheet rule): the capture stylesheet is indexed whole in readable/, never sliced.",
+      "title": "_player/hosted — stylesheet (whole-file, never sliced)",
+      "desc": "Lines 1-269 of readable/_player/hosted.pretty.css. Whole-file (stylesheet rule): the capture stylesheet is indexed whole in readable/, never sliced.",
       "note": "whole-file (stylesheet, not sliced): CSS is indexed whole in readable/",
       "startLine": 1,
       "endLine": 269,
-      "sourceFile": "readable/_player__hosted.pretty.css"
+      "sourceFile": "readable/_player/hosted.pretty.css"
     }
   ],
   "notRendered": [

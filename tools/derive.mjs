@@ -14,12 +14,13 @@
 // Pipeline:
 //   _player/hosted.js -> pinned prettier 3.9.6 (module API — the CLI respects
 //                        .gitignore and can silently echo its input), single
-//                        pass, verified idempotent -> readable/_player__hosted.pretty.js
-//                        (capture root is the repo root — DISK_PREFIX "" — and
-//                        nested dirs are flattened with __).
-//   _player/hosted.css -> readable/_player__hosted.pretty.css, wholeFile
+//                        pass, verified idempotent -> readable/_player/hosted.pretty.js
+//                        (capture root is the repo root — DISK_PREFIX "" — so the
+//                        served path IS the disk path and the derived layers MIRROR
+//                        it: real subdirectories + served filename kept).
+//   _player/hosted.css -> readable/_player/hosted.pretty.css, wholeFile
 //                        section (stylesheet rule: stylesheets are never sliced).
-//   the minified IIFE    -> statement-aligned slices src/<tag>-NN.js at the
+//   the minified IIFE    -> statement-aligned slices src/_player/hosted-NN.js at the
 //                        top-level declaration boundaries of the IIFE BODY
 //                        (the whole file is one `(function(){…})()` expression,
 //                        so the wrapper open/close lines are non-standalone and
@@ -28,7 +29,9 @@
 //                        dead-world fleet window of 250-350 would yield only
 //                        two slices — recorded divergence). Every slice parses
 //                        standalone with `node --input-type=module --check -`
-//                        and round-trips byte-exact to its readable line range.
+//                        and round-trips byte-exact to its readable line range
+//                        through the recorded semantic rename map (rename-map.json
+//                        re-applied on every re-cut; apply -> recover -> derive -> gates).
 //   binary payloads      -> hashed notRendered records (file.riv, drawer.riv,
 //                        favicon.ico): no pretty pass, sha256 + bytes only.
 //   entry document       -> inline <script>/<style> scan (byte ranges + sha256):
@@ -40,14 +43,16 @@
 // stays CDN (standing vendor rule: a CDN dependency is not backfilled into the
 // capture); it is recorded in README.md and split-spec.json, not fetched.
 //
-// Identifiers in src/ are the bundle's own minified names — the rename
-// campaign (PLAN §5) is recorded as an open task in README.md. usage:
+// src/ identifiers are semantic names from the PLAN §5 rename campaign where the
+// bytes allow (tools/names.json + tools/apply-names.mjs -> rename-map.json);
+// binary .riv payloads stay hashed records. usage:
 //   node tools/derive.mjs
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { applyRecordedMap } from "./engine/rename-layer.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const proj = path.resolve(here, "..");
@@ -55,7 +60,6 @@ const PINNED = "3.9.6";
 const MIN_WINDOW = 100;
 const MAX_WINDOW = 140; // small app: the whole hosted.js is one 496-line IIFE
 const TODAY = "2026-10-12";
-const ROOT = ""; // capture root == repo root (DISK_PREFIX ""), the entry is served at "/"
 
 const sha256 = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
 const readLines = (abs) => {
@@ -67,13 +71,49 @@ const readLines = (abs) => {
 const linesOf = (text) => text.replace(/\n$/, "").split("\n");
 const lineOf = (text, offset) => text.slice(0, offset).split("\n").length;
 
-// capture-relative name -> readable twin name (root prefix stripped, dirs flattened)
-const tagOf = (capRel) => {
-  const rel = capRel.startsWith(ROOT) ? capRel.slice(ROOT.length) : capRel;
-  return rel.replace(/\.(js|css)$/i, "").split("/").join("__");
-};
+// capture-relative name -> readable twin name. The capture root is the repo
+// root (DISK_PREFIX ""), so the served path IS the disk path and the derived
+// layers MIRROR it: real subdirectories and the served filename are kept
+// (PLAN §5, served-path rule — taipei-rush-tokyo precedent, 2026-10-14).
+const tagOf = (capRel) => capRel.replace(/\.(js|css)$/i, "");
 const prettyRelFor = (capRel) =>
   "readable/" + tagOf(capRel) + (/\.css$/i.test(capRel) ? ".pretty.css" : ".pretty.js");
+
+// write a derived file at its repo-relative posix path, creating subdirs
+function writeDerived(rel, text) {
+  const abs = path.join(proj, rel.split("/").join(path.sep));
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, text);
+}
+
+// ── recorded semantic rename map (optional input; see engine header) ────
+// derive re-cuts src/ BY RE-APPLYING this map, so a re-cut reproduces the
+// committed (renamed) slices byte-for-byte — the pipeline order is
+// apply -> recover -> derive -> gates.
+function loadRenameMap() {
+  const p = path.join(proj, "rename-map.json");
+  if (!fs.existsSync(p)) return { files: {}, scoped: {}, present: false };
+  const rm = JSON.parse(fs.readFileSync(p, "utf8"));
+  return { files: rm.files || {}, scoped: rm.scoped || {}, present: true };
+}
+const recordsFor = (rm, srcRel) => {
+  const files = rm.files[srcRel];
+  const scoped = rm.scoped[srcRel];
+  if (!files && !scoped) return null;
+  return { files, scoped };
+};
+// The authored binding map (tools/names.json): chunk capture rel -> {old: new}
+// for the chunk's top-level bindings. Recorded into split-spec per source as
+// `renameBindings` (only the rules that actually fired) so the reconstruction
+// gates can rename index-only skipped sections too — their local-side names
+// reference the renamed bindings and are not part of any src slice (proposal
+// (t)(1)). Empty here (the wrapper sections carry no bindings), but carried.
+function loadNames() {
+  const p = path.join(here, "names.json");
+  if (!fs.existsSync(p)) return {};
+  const all = JSON.parse(fs.readFileSync(p, "utf8"));
+  return { byCapture: all.app || {} };
+}
 
 // ── pinned prettier (module API, exactly 3.9.6) ─────────────────────────
 async function loadPrettier() {
@@ -219,6 +259,8 @@ const WHOLE_FILE = {};
 async function main() {
   const { mod: prettier, at } = await loadPrettier();
   console.log(`pinned prettier ${PINNED} (${at})`);
+  const renameMap = loadRenameMap();
+  const names = loadNames();
 
   const manifest = JSON.parse(fs.readFileSync(path.join(proj, ".upstream", "manifest.json"), "utf8"));
   const captured = Object.keys(manifest.files).map((r) => r.split(path.sep).join("/")).sort();
@@ -284,8 +326,8 @@ async function main() {
     if (pretty === text)
       throw new Error(`${rel}: prettier output is byte-identical to the capture — nothing to derive`);
     const sourceFile = prettyRelFor(rel);
-    fs.writeFileSync(path.join(proj, sourceFile), pretty);
-    written.readable.add(path.basename(sourceFile));
+    writeDerived(sourceFile, pretty);
+    written.readable.add(sourceFile);
     const lines = linesOf(pretty);
 
     // ── IIFE shape detection (content-anchored: a shape change fails loudly) ──
@@ -360,27 +402,44 @@ async function main() {
 
     let nn = 0;
     let perFileSkipped = 0;
+    let perFileRenamed = 0;
+    const targetsByOld = new Map(); // old name -> Set(targets) seen in this chunk's recorded map
+    const noteTarget = (old, target) => {
+      if (!targetsByOld.has(old)) targetsByOld.set(old, new Set());
+      targetsByOld.get(old).add(target);
+    };
     for (const b of blocks) {
       if (b.kind === "slice") {
         nn++;
         const num = String(nn).padStart(2, "0");
-        const body = lines.slice(b.A - 1, b.B).join("\n") + "\n";
+        const file = `${tag}-${num}.js`;
+        const rawBody = lines.slice(b.A - 1, b.B).join("\n") + "\n";
+        // re-cut THROUGH the recorded rename map: a re-cut must reproduce the
+        // committed (renamed) slice byte-for-byte, or the pipeline is not
+        // reproducible (apply -> recover -> derive -> gates).
+        const record = recordsFor(renameMap, file);
+        const body = record ? applyRecordedMap(rawBody, record) : rawBody;
+        if (record) {
+          perFileRenamed++;
+          for (const [old, target] of Object.entries(record.files || {})) noteTarget(old, target);
+          for (const [old, hits] of Object.entries(record.scoped || {}))
+            for (const [, target] of hits) noteTarget(old, target);
+        }
         const ms = markers(body);
         const topWord = ms.length ? ms[0][0] : /^\s*import\b/.test(body) ? "imports" : tag.toLowerCase();
         const oversized = b.count === 1 && b.B - b.A + 1 > MAX_WINDOW;
-        const file = `${tag}-${num}.js`;
         const sliceText =
           `// ${tag} ${num} — ${topWord}\n` +
           `// Lines ${b.A}-${b.B} of ${sourceFile} (statement-aligned).\n` +
           body;
         const chk = parses(sliceText);
         if (!chk.ok) throw new Error(`generated src/${file} does not parse standalone: ${chk.why}`);
-        fs.writeFileSync(path.join(srcDir, file), sliceText);
-        written.src.add(file);
+        writeDerived(path.posix.join("src", file), sliceText);
+        written.src.add(path.posix.join("src", file));
         sections.push({
           file,
           title: `${tag} ${num} — ${topWord}`,
-          desc: `${oversized ? "Oversized single declaration (kept whole). " : ""}Lines ${b.A}-${b.B}. Markers: ${markerText(ms)}.`,
+          desc: `${oversized ? "Oversized single declaration (kept whole). " : ""}Lines ${b.A}-${b.B}. Markers: ${markerText(ms)}.${record ? " Range re-cut through the recorded semantic rename map." : ""}`,
           startLine: b.A,
           endLine: b.B,
           sourceFile,
@@ -402,6 +461,13 @@ async function main() {
     }
     slicedTotal += nn;
     skippedTotal += perFileSkipped;
+    // the authored app rules that actually fired (evidence: their targets appear
+    // in this chunk's recorded map) -> the chunk-level binding map recorded in
+    // the spec, used by the reconstruction gates for index-only skipped sections.
+    const authored = names.byCapture?.[rel] || {};
+    const renameBindings = {};
+    for (const [old, target] of Object.entries(authored))
+      if (targetsByOld.get(old)?.has(target)) renameBindings[old] = target;
     sources.push({
       sourceFile,
       capture: rel,
@@ -414,10 +480,14 @@ async function main() {
       idempotent: true,
       tag,
       slices: nn,
-      derived: `readable + ${nn} statement-aligned slice(s) of the IIFE body` + (perFileSkipped ? ` + ${perFileSkipped} skipped wrapper section(s)` : ""),
+      renameBindings,
+      derived:
+        `readable + ${nn} statement-aligned slice(s) of the IIFE body` +
+        (perFileRenamed ? ` (${perFileRenamed} through the recorded rename map)` : "") +
+        (perFileSkipped ? ` + ${perFileSkipped} skipped wrapper section(s)` : ""),
     });
     console.log(
-      `derive: ${rel} -> ${sourceFile} (${lines.length} lines, ${nn} slices, ${perFileSkipped} skipped wrapper)`,
+      `derive: ${rel} -> ${sourceFile} (${lines.length} lines, ${nn} slices${perFileRenamed ? `, ${perFileRenamed} renamed` : ""}, ${perFileSkipped} skipped wrapper)`,
     );
   }
 
@@ -428,8 +498,8 @@ async function main() {
     const pretty = await formatOnce(prettier, text, "css");
     if (pretty === text) throw new Error(`${rel}: prettier output is byte-identical to the capture`);
     const sourceFile = prettyRelFor(rel);
-    fs.writeFileSync(path.join(proj, sourceFile), pretty);
-    written.readable.add(path.basename(sourceFile));
+    writeDerived(sourceFile, pretty);
+    written.readable.add(sourceFile);
     const lines = linesOf(pretty);
     const tag = tagOf(rel);
     sections.push({
@@ -498,7 +568,7 @@ async function main() {
       if (pretty === b.text)
         throw new Error(`readable/${prettyFile} would be byte-identical to its capture source`);
       fs.writeFileSync(path.join(readableDir, prettyFile), pretty);
-      written.readable.add(prettyFile);
+      written.readable.add("readable/" + prettyFile);
       const lines = linesOf(pretty);
       const prettyBuf = Buffer.from(pretty, "utf8");
       sections.push({
@@ -531,15 +601,24 @@ async function main() {
 
   // ── 4) prune orphan derived files (capture untouched) ──────────────────
   let pruned = 0;
+  const walkDerived = (dir, out = []) => {
+    if (!fs.existsSync(dir)) return out;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walkDerived(p, out);
+      else out.push(path.relative(proj, p).split(path.sep).join("/"));
+    }
+    return out;
+  };
   for (const [dir, keep, exts] of [
     [readableDir, written.readable, /\.(pretty\.js|pretty\.css)$/],
     [srcDir, written.src, /\.js$/],
   ]) {
-    for (const f of fs.readdirSync(dir)) {
-      if (exts.test(f) && !keep.has(f)) {
-        fs.rmSync(path.join(dir, f));
+    for (const rel of walkDerived(dir)) {
+      if (exts.test(path.basename(rel)) && !keep.has(rel)) {
+        fs.rmSync(path.join(proj, rel.split("/").join(path.sep)));
         pruned++;
-        console.log(`derive: pruned orphan derived file ${path.join(path.basename(dir), f)}`);
+        console.log(`derive: pruned orphan derived file ${rel}`);
       }
     }
   }
@@ -561,20 +640,24 @@ async function main() {
       "https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.x.x/rive.js stays CDN (standing vendor rule — a CDN " +
       "dependency is not backfilled into the capture); it is documented here and in README.md. Derived pipeline: " +
       "capture → pinned prettier 3.9.6 (module API, default options, single pass verified idempotent — never the " +
-      "CLI: it respects .gitignore and can silently echo its input) → readable/<name>.pretty.js|css per captured " +
-      "JS/CSS file (capture root == repo root — DISK_PREFIX \"\" — nested dirs flattened with __; every pretty " +
-      "provably NOT byte-identical to its capture source) → statement-aligned slices src/<name>-NN.js of the " +
+      "CLI: it respects .gitignore and can silently echo its input) → readable/<served path>.pretty.js|css per " +
+      "captured JS/CSS file (capture root == repo root — DISK_PREFIX \"\" — so the served path IS the disk path and " +
+      "the derived layers MIRROR it: real subdirectories + served filename kept; every pretty provably NOT " +
+      "byte-identical to its capture source) → statement-aligned slices src/<served path>-NN.js of the " +
       "IIFE BODY (the whole file is one (function(){…})() expression, so the top-level declaration boundaries " +
       "are the body's statements; wrapper-open and wrapper-close lines are non-standalone and are indexed as " +
       "skipped sections). Windows are ~100-140 lines — a recorded divergence from the fleet's 250-350 window, " +
       "because the whole app is 496 readable lines and the larger window would yield only two slices. Every " +
       "slice parses standalone under `node --input-type=module --check -` and round-trips byte-exact to its " +
-      "recorded readable line range. Binary payloads (file.riv, _player/drawer.riv, _player/favicon.ico) are " +
-      "hashed notRendered records — no pretty/slice pass. Stylesheet rule — _player/hosted.css is wholeFile. " +
+      "recorded readable line range through the recorded semantic rename map (rename-map.json, re-applied on " +
+      "every re-cut; apply -> recover -> derive -> gates). Binary payloads (file.riv, _player/drawer.riv, " +
+      "_player/favicon.ico) are hashed notRendered records — no pretty/slice pass. Stylesheet rule — " +
+      "_player/hosted.css is wholeFile. " +
       "Inline <script>/<style> scan: index.html references external scripts only (the CDN rive.js and " +
       "/_player/hosted.js) — zero inline content blocks, so there are no *-inline-N twins and no " +
-      "index-inline-map.json. Identifiers in src/ are the bundle's own minified names — the rename campaign " +
-      "(PLAN §5) is recorded as an open task in README.md, not claimed here. Capture bytes are untouched by " +
+      "index-inline-map.json. src/ identifiers are semantic names from the PLAN §5 rename campaign where the " +
+      "bytes allow (tools/names.json -> tools/apply-names.mjs -> rename-map.json); binary .riv payloads stay " +
+      "hashed records. Capture bytes are untouched by " +
       "everything above; re-cut with `node tools/derive.mjs` after any capture refresh. `node tools/audit.js` " +
       "is the gate.",
     renderOptions: {
@@ -602,6 +685,20 @@ async function main() {
         "no inline <script>/<style> content blocks in the captured entry document — external script references " +
         "only (CDN rive.js + /_player/hosted.js), so there are no *-inline-N twins and no " +
         "readable/index-inline-map.json",
+    },
+    rename: {
+      map: "rename-map.json",
+      present: renameMap.present,
+      flatNames: Object.values(renameMap.files).reduce((n, m) => n + Object.keys(m).length, 0),
+      scopedOccurrences: Object.values(renameMap.scoped).reduce(
+        (n, m) => n + Object.values(m).reduce((k, hits) => k + hits.length, 0),
+        0,
+      ),
+      note:
+        "Semantic renames recovered from the committed slices (tools/recover-scoped-map.mjs) and re-applied on " +
+        "every re-cut (tools/engine/rename-layer.mjs applyRecordedMap); authored in tools/names.json and applied " +
+        "by tools/apply-names.mjs. `files` is a word-boundary map, `scoped` addresses token indices. Binary .riv " +
+        "payloads are not code and stay hashed notRendered records; the CDN rive.js runtime is not captured.",
     },
     sources,
     sections,
@@ -639,11 +736,13 @@ async function main() {
   for (const s of sections) {
     if (s.wholeFile || s.skipped) continue;
     ranged++;
-    const abs = path.join(srcDir, s.file);
+    const abs = path.join(proj, "src", s.file);
     const text = fs.readFileSync(abs, "utf8");
     const nl2 = text.indexOf("\n", text.indexOf("\n") + 1);
     const body = text.slice(nl2 + 1);
-    const expected = readLines(path.join(proj, s.sourceFile)).slice(s.startLine - 1, s.endLine).join("\n") + "\n";
+    const raw = readLines(path.join(proj, s.sourceFile)).slice(s.startLine - 1, s.endLine).join("\n") + "\n";
+    const record = recordsFor(renameMap, s.file);
+    const expected = record ? applyRecordedMap(raw, record) : raw;
     if (body !== expected) {
       console.error(`ROUND-TRIP FAIL ${s.file}`);
       bad++;
@@ -663,7 +762,7 @@ async function main() {
   }
   console.log(
     `derive: ${written.readable.size} readable file(s), ${written.src.size} src slices ` +
-      `(${parsed}/${ranged} parse standalone, ${roundOK}/${ranged} round-trip byte-exact), ` +
+      `(${parsed}/${ranged} parse standalone, ${roundOK}/${ranged} round-trip byte-exact through the recorded map), ` +
       `${skippedTotal} skipped, ${sections.filter((s) => s.wholeFile).length} wholeFile, ` +
       `${prettyParsed} pretty js parse clean, ${notRendered.length} notRendered, ${pruned} orphan(s) pruned — ` +
       `self-check ${bad ? bad + " FAILURE(S)" : "clean"}`,
