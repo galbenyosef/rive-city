@@ -1,18 +1,18 @@
 // _player/hosted 02 — classlist
 // Lines 95-224 of readable/_player/hosted.pretty.js (statement-aligned).
-  function N(e, n, t, o) {
+  function makeDraggable(e, n, t, o) {
     const s = document.documentElement;
     let u = null,
       a = null;
     const i = function (c, w) {
         const d = e.getBoundingClientRect(),
           f = Math.min(
-            Math.max(c, d.width / 2 + p),
-            window.innerWidth - d.width / 2 - p,
+            Math.max(c, d.width / 2 + DRAG_PADDING),
+            window.innerWidth - d.width / 2 - DRAG_PADDING,
           ),
           T = Math.min(
-            Math.max(w, d.height / 2 + p),
-            window.innerHeight - d.height / 2 - p,
+            Math.max(w, d.height / 2 + DRAG_PADDING),
+            window.innerHeight - d.height / 2 - DRAG_PADDING,
           );
         ((a = { x: f / window.innerWidth, y: T / window.innerHeight }),
           s.style.setProperty("--drawer-x", f + "px"),
@@ -20,7 +20,7 @@
           e.classList.toggle("tips-below", T < 60));
       },
       l = function (c) {
-        return c.clientX - n.getBoundingClientRect().left < F;
+        return c.clientX - n.getBoundingClientRect().left < GRIP_WIDTH;
       },
       m = function (c) {
         i(c.clientX - u.x, c.clientY - u.y);
@@ -30,8 +30,8 @@
           window.removeEventListener("pointermove", m),
           window.removeEventListener("pointerup", r),
           window.removeEventListener("pointercancel", r));
-        const c = x(e.getBoundingClientRect());
-        (t(c.distance < O ? c.side : "float"),
+        const c = nearestEdge(e.getBoundingClientRect());
+        (t(c.distance < DOCK_THRESHOLD ? c.side : "float"),
           e.getBoundingClientRect(),
           e.classList.remove("dragging"));
       };
@@ -58,7 +58,7 @@
           i(a.x * window.innerWidth, a.y * window.innerHeight);
       }));
   }
-  function G(e, n) {
+  function setupPeek(e, n) {
     (n.addEventListener("pointerenter", function (t) {
       t.pointerType === "mouse" && e.classList.add("peek");
     }),
@@ -73,17 +73,17 @@
         )
           return;
         const o = e.getBoundingClientRect();
-        (t.clientX < o.left - v ||
-          t.clientX > o.right + v ||
-          t.clientY < o.top - v ||
-          t.clientY > o.bottom + v) &&
+        (t.clientX < o.left - PEEK_MARGIN ||
+          t.clientX > o.right + PEEK_MARGIN ||
+          t.clientY < o.top - PEEK_MARGIN ||
+          t.clientY > o.bottom + PEEK_MARGIN) &&
           e.classList.remove("peek");
       }),
       document.addEventListener("pointerdown", function (t) {
         !e.contains(t.target) && t.target !== n && e.classList.remove("peek");
       }));
   }
-  function q(e, n, t) {
+  function setupTip(e, n, t) {
     const o = t.properties
       .filter(function (i) {
         return i.type === "boolean" && i.name.startsWith("hover");
@@ -113,11 +113,11 @@
           window.clearTimeout(u),
           (u = window.setTimeout(function () {
             ((s = null), (t.boolean("copied").value = !1), a());
-          }, X)));
+          }, COPIED_TIP_MS)));
       }
     );
   }
-  function j(e) {
+  function toggleFullscreen(e) {
     const n = document.documentElement;
     if (!n.requestFullscreen) {
       e("Not available here");

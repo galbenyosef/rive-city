@@ -20,9 +20,9 @@
   },
   "rename": {
     "map": "rename-map.json",
-    "present": false,
-    "flatNames": 0,
-    "scopedOccurrences": 0,
+    "present": true,
+    "flatNames": 75,
+    "scopedOccurrences": 1,
     "note": "Semantic renames recovered from the committed slices (tools/recover-scoped-map.mjs) and re-applied on every re-cut (tools/engine/rename-layer.mjs applyRecordedMap); authored in tools/names.json and applied by tools/apply-names.mjs. `files` is a word-boundary map, `scoped` addresses token indices. Binary .riv payloads are not code and stay hashed notRendered records; the CDN rive.js runtime is not captured."
   },
   "sources": [
@@ -38,8 +38,49 @@
       "idempotent": true,
       "tag": "_player/hosted",
       "slices": 5,
-      "renameBindings": {},
-      "derived": "readable + 5 statement-aligned slice(s) of the IIFE body + 2 skipped wrapper section(s)"
+      "renameBindings": {
+        "g": "readDataAttr",
+        "y": "showError",
+        "B": "hideStatus",
+        "h": "FIT_MODES",
+        "E": "instances",
+        "C": "analyticsSent",
+        "D": "detectDeviceType",
+        "I": "referrerHost",
+        "_": "sendAnalytics",
+        "H": "fitFromUrl",
+        "R": "applyFit",
+        "W": "DRAWER_SRC",
+        "z": "RIVE_APP_URL",
+        "F": "GRIP_WIDTH",
+        "X": "COPIED_TIP_MS",
+        "S": "FIT_EVENTS",
+        "K": "MOBILE_WIDTH",
+        "Y": "DRAWER_REVEAL_MS",
+        "p": "DRAG_PADDING",
+        "O": "DOCK_THRESHOLD",
+        "U": "EDGE_ANGLES",
+        "v": "PEEK_MARGIN",
+        "b": "drawerInstance",
+        "x": "nearestEdge",
+        "N": "makeDraggable",
+        "G": "setupPeek",
+        "q": "setupTip",
+        "j": "toggleFullscreen",
+        "V": "mountDrawer",
+        "A": "LEFT_CODES",
+        "k": "RIGHT_CODES",
+        "M": "KEY_COUNTERS",
+        "J": "bindKeyboardInput",
+        "L": "resolveFit",
+        "Q": "stateMachineName",
+        "Z": "watermarkDurationMs",
+        "$": "createInstance",
+        "ee": "loadCanvas",
+        "te": "watchResolution",
+        "P": "init"
+      },
+      "derived": "readable + 5 statement-aligned slice(s) of the IIFE body (5 through the recorded rename map) + 2 skipped wrapper section(s)"
     },
     {
       "sourceFile": "readable/_player/hosted.pretty.css",
@@ -71,7 +112,7 @@
     {
       "file": "_player/hosted-01.js",
       "title": "_player/hosted 01 — distance",
-      "desc": "Lines 3-94. Markers: distance(5), location(4).",
+      "desc": "Lines 3-94. Markers: distance(5), location(4). Range re-cut through the recorded semantic rename map.",
       "startLine": 3,
       "endLine": 94,
       "sourceFile": "readable/_player/hosted.pretty.js"
@@ -79,7 +120,7 @@
     {
       "file": "_player/hosted-02.js",
       "title": "_player/hosted 02 — classlist",
-      "desc": "Lines 95-224. Markers: classlist(12), addeventlistener(10).",
+      "desc": "Lines 95-224. Markers: classlist(12), addeventlistener(10). Range re-cut through the recorded semantic rename map.",
       "startLine": 95,
       "endLine": 224,
       "sourceFile": "readable/_player/hosted.pretty.js"
@@ -87,15 +128,15 @@
     {
       "file": "_player/hosted-03.js",
       "title": "_player/hosted 03 — classlist",
-      "desc": "Lines 225-331. Markers: classlist(8), remove(8).",
+      "desc": "Lines 225-331. Markers: classlist(8), remove(8). Range re-cut through the recorded semantic rename map.",
       "startLine": 225,
       "endLine": 331,
       "sourceFile": "readable/_player/hosted.pretty.js"
     },
     {
       "file": "_player/hosted-04.js",
-      "title": "_player/hosted 04 — addeventlistener",
-      "desc": "Lines 332-453. Markers: addeventlistener(4), code(4).",
+      "title": "_player/hosted 04 — readdataattr",
+      "desc": "Lines 332-453. Markers: readdataattr(6), resolvefit(5). Range re-cut through the recorded semantic rename map.",
       "startLine": 332,
       "endLine": 453,
       "sourceFile": "readable/_player/hosted.pretty.js"
@@ -103,7 +144,7 @@
     {
       "file": "_player/hosted-05.js",
       "title": "_player/hosted 05 — addeventlistener",
-      "desc": "Lines 454-494. Markers: addeventlistener(3), matchmedia(2).",
+      "desc": "Lines 454-494. Markers: addeventlistener(3), init(3). Range re-cut through the recorded semantic rename map.",
       "startLine": 454,
       "endLine": 494,
       "sourceFile": "readable/_player/hosted.pretty.js"

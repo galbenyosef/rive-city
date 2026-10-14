@@ -1,0 +1,100 @@
+{
+  "note": "Semantic rename map for src/, recovered mechanically by anchor alignment from the committed slices (tools/recover-scoped-map.mjs): the token streams of a slice and its readable range must be identical in every non-identifier position, so every differing identifier pair is a proven rename, not a guess. `files` is a word-boundary map, used only where a name means the same thing everywhere in the slice and is never a property or object key; `scoped` addresses the rest by exact token index as { name: [[i, target], …] }. tools/derive.mjs re-applies this map when it re-cuts src/ (index-validated), tools/verify-rename.mjs and tools/audit.js re-prove every slice from it, and tools/check-chunk.mjs proves cross-slice references still resolve. Regenerate with `node tools/recover-scoped-map.mjs` after any rename batch.",
+  "files": {
+    "_player/hosted-01.js": {
+      "B": "hideStatus",
+      "C": "analyticsSent",
+      "D": "detectDeviceType",
+      "E": "instances",
+      "F": "GRIP_WIDTH",
+      "H": "fitFromUrl",
+      "I": "referrerHost",
+      "K": "MOBILE_WIDTH",
+      "O": "DOCK_THRESHOLD",
+      "R": "applyFit",
+      "S": "FIT_EVENTS",
+      "U": "EDGE_ANGLES",
+      "W": "DRAWER_SRC",
+      "X": "COPIED_TIP_MS",
+      "Y": "DRAWER_REVEAL_MS",
+      "_": "sendAnalytics",
+      "b": "drawerInstance",
+      "g": "readDataAttr",
+      "h": "FIT_MODES",
+      "p": "DRAG_PADDING",
+      "v": "PEEK_MARGIN",
+      "x": "nearestEdge",
+      "y": "showError",
+      "z": "RIVE_APP_URL"
+    },
+    "_player/hosted-02.js": {
+      "F": "GRIP_WIDTH",
+      "G": "setupPeek",
+      "N": "makeDraggable",
+      "O": "DOCK_THRESHOLD",
+      "X": "COPIED_TIP_MS",
+      "j": "toggleFullscreen",
+      "p": "DRAG_PADDING",
+      "q": "setupTip",
+      "v": "PEEK_MARGIN"
+    },
+    "_player/hosted-03.js": {
+      "A": "LEFT_CODES",
+      "G": "setupPeek",
+      "K": "MOBILE_WIDTH",
+      "M": "KEY_COUNTERS",
+      "N": "makeDraggable",
+      "R": "applyFit",
+      "S": "FIT_EVENTS",
+      "U": "EDGE_ANGLES",
+      "V": "mountDrawer",
+      "W": "DRAWER_SRC",
+      "Y": "DRAWER_REVEAL_MS",
+      "b": "drawerInstance",
+      "h": "FIT_MODES",
+      "j": "toggleFullscreen",
+      "k": "RIGHT_CODES",
+      "q": "setupTip",
+      "x": "nearestEdge",
+      "z": "RIVE_APP_URL"
+    },
+    "_player/hosted-04.js": {
+      "$": "createInstance",
+      "A": "LEFT_CODES",
+      "B": "hideStatus",
+      "E": "instances",
+      "H": "fitFromUrl",
+      "J": "bindKeyboardInput",
+      "L": "resolveFit",
+      "M": "KEY_COUNTERS",
+      "Q": "stateMachineName",
+      "R": "applyFit",
+      "V": "mountDrawer",
+      "Z": "watermarkDurationMs",
+      "_": "sendAnalytics",
+      "ee": "loadCanvas",
+      "g": "readDataAttr",
+      "h": "FIT_MODES",
+      "k": "RIGHT_CODES",
+      "y": "showError"
+    },
+    "_player/hosted-05.js": {
+      "E": "instances",
+      "P": "init",
+      "b": "drawerInstance",
+      "ee": "loadCanvas",
+      "te": "watchResolution",
+      "y": "showError"
+    }
+  },
+  "scoped": {
+    "_player/hosted-02.js": {
+      "x": [
+        [
+          278,
+          "nearestEdge"
+        ]
+      ]
+    }
+  }
+}

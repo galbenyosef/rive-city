@@ -1,6 +1,6 @@
 // _player/hosted 03 — classlist
 // Lines 225-331 of readable/_player/hosted.pretty.js (statement-aligned).
-  function V(e, n) {
+  function mountDrawer(e, n) {
     const t = document.createElement("aside");
     ((t.id = "rive-drawer"), t.setAttribute("aria-label", "Page controls"));
     const o = document.createElement("canvas");
@@ -15,7 +15,7 @@
         i.preventDefault();
       }));
     const a = new rive.Rive({
-      src: W,
+      src: DRAWER_SRC,
       canvas: o,
       autoplay: !0,
       autoBind: !0,
@@ -23,22 +23,22 @@
       layout: new rive.Layout({ fit: "contain" }),
       onLoad: function () {
         const i = a.viewModelInstance;
-        i.number("fit").value = h.indexOf(e);
+        i.number("fit").value = FIT_MODES.indexOf(e);
         const l = a.bounds;
         ((o.style.width = l.maxX - l.minX + "px"),
           (o.style.height = l.maxY - l.minY + "px"),
           a.resizeDrawingSurfaceToCanvas(),
-          (b = a));
-        const m = q(t, s, i),
+          (drawerInstance = a));
+        const m = setupTip(t, s, i),
           r = function (d) {
             (t.setAttribute("data-side", d),
-              (i.number("edgeAngle").value = U[d]));
+              (i.number("edgeAngle").value = EDGE_ANGLES[d]));
           };
         r("bottom");
         const c = function (d) {
           (d &&
             t.getAttribute("data-side") === "float" &&
-            r(x(t.getBoundingClientRect()).side),
+            r(nearestEdge(t.getBoundingClientRect()).side),
             t.classList.toggle("hidden", d),
             t.classList.remove("peek"),
             (i.boolean("hidden").value = d));
@@ -46,10 +46,10 @@
         if (
           (a.on(rive.EventType.RiveEvent, function (d) {
             const f = d.data.name;
-            S[f]
-              ? (R(S[f]), (i.number("fit").value = h.indexOf(S[f])))
+            FIT_EVENTS[f]
+              ? (applyFit(FIT_EVENTS[f]), (i.number("fit").value = FIT_MODES.indexOf(FIT_EVENTS[f])))
               : f === "fullscreen"
-                ? j(m)
+                ? toggleFullscreen(m)
                 : f === "copy" && navigator.clipboard
                   ? navigator.clipboard.writeText(window.location.href).then(
                       function () {
@@ -64,20 +64,20 @@
                     : f === "remove"
                       ? (t.remove(),
                         u.remove(),
-                        (b = null),
+                        (drawerInstance = null),
                         window.setTimeout(function () {
                           a.cleanup();
                         }))
-                      : f === "build" && window.open(z, "_blank", "noopener");
+                      : f === "build" && window.open(RIVE_APP_URL, "_blank", "noopener");
           }),
-          N(t, o, r, c),
-          G(t, u),
+          makeDraggable(t, o, r, c),
+          setupPeek(t, u),
           n === "docked")
         ) {
           t.classList.remove("offstage");
           return;
         }
-        if (n === "hidden" || window.innerWidth < K) {
+        if (n === "hidden" || window.innerWidth < MOBILE_WIDTH) {
           (c(!0), t.classList.remove("offstage"));
           return;
         }
@@ -85,7 +85,7 @@
           t.classList.remove("offstage");
           const d = window.setTimeout(function () {
             (c(!0), t.matches(":hover") && t.classList.add("peek"));
-          }, Y);
+          }, DRAWER_REVEAL_MS);
           t.addEventListener("pointerdown", function () {
             window.clearTimeout(d);
           });
@@ -99,9 +99,9 @@
       },
     });
   }
-  const A = ["ArrowLeft", "KeyA"],
-    k = ["ArrowRight", "KeyD"],
-    M = {
+  const LEFT_CODES = ["ArrowLeft", "KeyA"],
+    RIGHT_CODES = ["ArrowRight", "KeyD"],
+    KEY_COUNTERS = {
       jumpCount: ["Space", "ArrowUp", "KeyW"],
       downCount: ["ArrowDown", "KeyS"],
       actCount: ["KeyE", "Enter"],

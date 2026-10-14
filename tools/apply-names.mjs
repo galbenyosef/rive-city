@@ -164,6 +164,8 @@ let pendingFnName = null; // scope key for the next function: method / var-assig
 let objectName = null; // set while walking `const X = { … }` inits
 let chunkText = ""; // the chunk currently being analyzed by the preflight
 let chunkLines = [];
+let topLevelCalls = new WeakSet(); // CallExpressions that are a whole top-level statement (the IIFE)
+let iifeScope = null; // the function scope of a top-level IIFE callee (rive-city's whole app)
 
 function declare(name, kind, scope = current, node = null) {
   if (kind === "var" || kind === "function") scope = scope.fnScope;
@@ -203,6 +205,11 @@ function walk(node, parent) {
   switch (node.type) {
     case "Program": {
       for (const s of node.body) hoist(s);
+      // mark whole-statement call expressions (a top-level IIFE) so its callee's
+      // function scope can be recognised as the app scope (rive-city shape)
+      for (const s of node.body)
+        if (s.type === "ExpressionStatement" && s.expression && s.expression.type === "CallExpression")
+          topLevelCalls.add(s.expression);
       for (const s of node.body) walk(s, node);
       return;
     }
@@ -228,6 +235,10 @@ function walk(node, parent) {
       const outer = pushScope(scopeKey, true);
       outer.node = node;
       if (scopeKey && !functionScopes.has(scopeKey)) functionScopes.set(scopeKey, outer);
+      // a top-level IIFE callee: its function scope IS the app scope (the whole
+      // rive-city app is one `(function(){…})();` — its body's top-level
+      // bindings are what the slices expose and what the app rules address).
+      if (parent && parent.type === "CallExpression" && topLevelCalls.has(parent)) iifeScope = outer;
       pendingFnName = null;
       const outerObjectName = objectName;
       objectName = null;
@@ -387,7 +398,15 @@ function analyze(codeText) {
   functionScopes = new Map();
   pendingFnName = null;
   objectName = null;
+  topLevelCalls = new WeakSet();
+  iifeScope = null;
   walk(ast, null);
+  // rive-city shape: the whole chunk is one top-level IIFE, so the app's
+  // top-level bindings live one level below the literal program. Re-root the
+  // "program scope" at the IIFE callee's function scope so the app rules address
+  // exactly those bindings (their declarations sit in the ranged slices; their
+  // cross-slice references are unbound in each slice and are renamed too).
+  if (iifeScope) programScope = iifeScope;
   return ast;
 }
 

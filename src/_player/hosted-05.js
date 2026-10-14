@@ -1,13 +1,13 @@
 // _player/hosted 05 — addeventlistener
 // Lines 454-494 of readable/_player/hosted.pretty.js (statement-aligned).
-  function te() {
+  function watchResolution() {
     if (typeof window.matchMedia != "function") return;
     let e = null;
     const n = function () {
-        (E.forEach(function (o) {
+        (instances.forEach(function (o) {
           o.instance.resizeDrawingSurfaceToCanvas();
         }),
-          b && b.resizeDrawingSurfaceToCanvas(),
+          drawerInstance && drawerInstance.resizeDrawingSurfaceToCanvas(),
           t());
       },
       t = function () {
@@ -29,15 +29,15 @@
       };
     t();
   }
-  function P() {
+  function init() {
     if (typeof rive > "u") {
-      y("This animation could not be loaded.");
+      showError("This animation could not be loaded.");
       return;
     }
     const e = document.querySelectorAll("canvas[data-src]");
-    for (let n = 0; n < e.length; n += 1) ee(e[n]);
-    te();
+    for (let n = 0; n < e.length; n += 1) loadCanvas(e[n]);
+    watchResolution();
   }
   document.readyState === "loading"
-    ? document.addEventListener("DOMContentLoaded", P)
-    : P();
+    ? document.addEventListener("DOMContentLoaded", init)
+    : init();
