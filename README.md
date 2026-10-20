@@ -246,6 +246,81 @@ record-manifest --check: PASS — 6 capture file(s) recorded, walk agrees byte-f
   artboards are left as-is: there is nothing to name them from beyond their use
   sites, and the `.riv` payloads are binary scene data, not code.
 
+### 2026-10-20 rename-layer re-sync (PLAN §5 campaign, current fleet guards)
+
+The 40-name worklist in `tools/names.json` was re-run end to end under the
+mirror's toolchain re-synced from the fleet's current set
+(`mirrors-standard/templates/rename-campaign/`). The guards the fleet gained
+after this mirror's 2026-10-14 pass are now the ones that judge its names:
+
+- **(ah)** — the program scope is re-rooted at a top-level IIFE callee ONLY
+  when the *entire* program is one expression statement calling a function, so
+  a flat module keeps the literal program scope. This capture **is** one
+  whole-program IIFE (`(function () { … })();`), so the re-rooting that puts the
+  app's 40 bindings in reach stands; the guard only refuses the loose shape.
+- **(aj)** — a labeled statement's *body* is walked (the label identifier is a
+  name position and is skipped). Without it, an identifier inside a labeled loop
+  could be renamed at some references and not others.
+- **wonderforge** (engine) — `...HM(c)` is a *call*, not a property read; the
+  property-access guard no longer matches the third dot of a spread, which used
+  to demote a clean word-boundary rename to the index-addressed map.
+
+The per-mirror adaptations are kept as they were: the `app` rule set stays
+keyed by **capture rel** (`_player/hosted.js` — the fleet idiom, this capture
+has one app chunk), the marker stop-list keeps `rive` (the runtime global must
+not dominate slice markers), and no name was added, removed or substituted.
+
+**Result: 40 of 40 names applied, 0 refused.** The writer's preflight judges
+every program-scope binding of the chunk ELIGIBLE, `apply-names --all` writes
+**114 identifier splices** and reproduces every committed slice byte-for-byte,
+`recover-scoped-map.mjs` re-recovers `rename-map.json` byte-identically (75
+word-boundary records + 1 indexed record), and `derive.mjs` re-cuts `src/` +
+`readable/` + `split-spec.json` byte-identically. The guard re-sync changed no
+output — it only strengthened the judgement. Gate tails (2026-10-20):
+
+```
+$ node tools/apply-names.mjs --list
+app chunk _player/hosted.js (readable/_player/hosted.pretty.js): 40 program-scope name(s), 40 ELIGIBLE, 0 refused
+
+$ node tools/apply-names.mjs --all
+_player/hosted-01.js: no change (already applied)
+… (5/5 slices)
+apply-names: 5 file(s) visited, 0 changed, 0 rule group(s), 114 identifier splice(s) (app: 40 name(s) over 1 chunk(s), 114 splice(s))
+
+$ node tools/verify-rename.mjs --all
+readable/_player/hosted.pretty.js: 5 slice(s), 5 renamed, reproduces: 5/5, references ok: YES, bindings ok: YES
+verify-rename: 5/5 slice(s) reproduce byte-exact, 5 renamed slice(s) (1 indexed occurrence(s)), 1/1 chunk(s) references+bindings YES
+
+$ node tools/check-chunk.mjs --all
+readable/_player/hosted.pretty.js: 5 ranged slice(s) (7 section(s) in the reconstruction), 5 substituted
+  cross-slice calls resolve: YES
+check-chunk: 1 chunk(s), 5 slice body(ies) substituted — all cross-slice calls resolve
+
+$ node tools/refcheck.mjs          # no shadowing / duplicate / shorthand drift — clean
+$ node tools/derive.mjs --check    # re-derives in memory and compares — byte-identical
+$ node tools/audit.js
+AUDIT PASS — 8 spec sections (5/5 src↔pretty round-trips byte-exact through the recorded rename map, 5 renamed slice(s) re-proved from rename-map.json (1 indexed map(s) honest), 2/2 pretty sources tiled contiguously, 2/2 skipped IIFE-wrapper sections re-verified textually, 5/5 src slices + 1/1 readable/*.pretty.js parse standalone (node --input-type=module --check -), 2/2 pretties provably distinct from their capture source, 3/3 binary payload records match the capture bytes, 3 index-only wholeFile/skipped sections carry no src file, 0 inline content block(s) (no twins needed), 0/0 imports resolve inside the capture (0 whitelisted machinery), 2/2 pretties re-render byte-exact under pinned prettier 3.9.6, capture manifest free of derived layers)
+
+$ node tools/verify.mjs
+6 files checked, 0 problems
+
+$ node tools/record-manifest.mjs --check
+record-manifest --check: PASS — 6 capture file(s) recorded, walk agrees byte-for-byte, no derived path leaked
+```
+
+Serve probe: all 6 served paths over HTTP 200 with exact capture byte counts
+(`/` 908, `_player/hosted.js` 10 132, `_player/hosted.css` 5 903,
+`_player/favicon.ico` 15 086, `_player/drawer.riv` 9 513, `file.riv`
+29 616 149) — listener killed, port closed.
+
+- **Drift (2026-10-20):** the UAT deploy is still live and `_player/hosted.js`
+  has been rebuilt upstream — 10 170 B vs the captured 10 132 B
+  (sha `a30c3820…` vs `b2395675…`). The 35 differing pretty lines are all the
+  minifier's short-name reassignment (`D↔I`, `H↔F`, `W↔z`, `O↔Y`, …) on
+  identical logic — the app was rebuilt, not changed. The capture is **not**
+  refreshed: a mirror is a point-in-time snapshot, and the 40 semantic names
+  are bound to the captured bytes.
+
 ## Mirror conventions
 
 - **Capture layer** — the captured files are byte-exact copies of what the origin

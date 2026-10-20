@@ -2,7 +2,10 @@
 // slice bodies, at identifier-token spans (the campaign writer, PLAN §5).
 // RIVE CITY — copied + adapted from the fleet precedent (grid-academy /
 // call-of-roque / kals-valley / ziggy-card / stillwater / pelota / kowloon
-// tools/apply-names.mjs;
+// tools/apply-names.mjs), and RE-SYNCED on 2026-10-20 with the current fleet
+// set (mirrors-standard/templates/rename-campaign/apply-names.mjs — the
+// newest lineage, 2026-10-20) so the fleet's current guards are the ones that
+// judge this mirror's names;
 // the canonical guard family — bare `let a, b` declarators, bracket-aware `:`
 // keys, exact 2-line header strip, shorthand-import/export and
 // shorthand-property refusal, marked FunctionDeclaration/ClassDeclaration ids
@@ -13,7 +16,13 @@
 // applied by the reconstruction gates) and do not refuse a rule, while
 // wholeFile regions still do, and the (ad) target-uniqueness scoping —
 // uniqueness is enforced per CHUNK (the capture rel), the unit a rename can
-// legally span; the global-rule idiom keeps its own global map). Nothing is
+// legally span; the global-rule idiom keeps its own global map). The two
+// guards added by the 2026-10-20 re-sync are (ah) — the program scope is
+// re-rooted at a top-level IIFE callee ONLY when the ENTIRE program is one
+// expression statement calling a function, so a flat module keeps the literal
+// program scope — and (aj) — a labeled statement's BODY is walked (the label
+// identifier is a name position and is skipped), so identifiers inside a
+// labeled loop are not left unrenamed. Nothing is
 // read from another mirror at runtime.
 //
 // RIVE CITY is a rive.to hosted-player deployment: the whole app is ONE
@@ -205,11 +214,17 @@ function walk(node, parent) {
   switch (node.type) {
     case "Program": {
       for (const s of node.body) hoist(s);
-      // mark whole-statement call expressions (a top-level IIFE) so its callee's
-      // function scope can be recognised as the app scope (rive-city shape)
-      for (const s of node.body)
+      // mark the whole-program IIFE call (rive-city shape): re-root the app
+      // scope ONLY when the ENTIRE program is one expression statement calling a
+      // function — a flat ESM module (many top-level call statements) must keep
+      // the literal program scope (proposal (ag), scoped to the true IIFE shape
+      // by proposal (ah)). This capture IS one whole-program IIFE, so the
+      // re-rooting stands.
+      if (node.body.length === 1) {
+        const s = node.body[0];
         if (s.type === "ExpressionStatement" && s.expression && s.expression.type === "CallExpression")
           topLevelCalls.add(s.expression);
+      }
       for (const s of node.body) walk(s, node);
       return;
     }
@@ -341,6 +356,15 @@ function walk(node, parent) {
       return;
     }
     case "LabeledStatement":
+      // the label identifier is a name position (isName) and must not be walked,
+      // but the labeled STATEMENT BODY must be — returning here left every
+      // identifier inside a labeled loop unmarked, so a program-scope name used
+      // there was renamed at some references and not others (found live on
+      // voxelrush's entry chunk: `e: for (...) { ... v.FURNACE ... }` kept `v`
+      // while its declaration became BLOCK — caught by verify-rename's reference
+      // drift). Fix: walk the body, skip the label (proposal (aj)).
+      walk(node.body, node);
+      return;
     case "BreakStatement":
     case "ContinueStatement":
       return;
@@ -401,7 +425,8 @@ function analyze(codeText) {
   topLevelCalls = new WeakSet();
   iifeScope = null;
   walk(ast, null);
-  // rive-city shape: the whole chunk is one top-level IIFE, so the app's
+  // rive-city shape (proposal (ag), scoped to the true IIFE shape by (ah)): the
+  // whole chunk is ONE top-level IIFE, so the app's
   // top-level bindings live one level below the literal program. Re-root the
   // "program scope" at the IIFE callee's function scope so the app rules address
   // exactly those bindings (their declarations sit in the ranged slices; their

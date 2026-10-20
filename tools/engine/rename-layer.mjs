@@ -2,17 +2,23 @@
 // verify a semantic rename map over the readable layer. (Copied + adapted from
 // the fleet's newest engine lineage — grid-academy / embervale-adventure /
 // call-of-roque / kals-valley / ziggy-card / stillwater / madrid-rush / kowloon /
-// vanta7 / skyforge / pelota tools/engine/rename-layer.mjs, carrying the
-// canonical guard family and ALL recorded defect fixes: the brace-depth template
+// vanta7 / skyforge / pelota tools/engine/rename-layer.mjs, and RE-SYNCED on
+// 2026-10-20 with the current fleet set
+// (mirrors-standard/templates/rename-campaign/engine/rename-layer.mjs — the
+// newest lineage, 2026-10-20), carrying the canonical guard family and ALL
+// recorded defect fixes: the brace-depth template
 // scanner (vanta7, proposal (r)), the marked FunctionDeclaration/ClassDeclaration
 // ids (kowloon, proposal (p)), the bracket-aware `:` object-key guard incl.
 // applyBindingMap (stillwater / madrid-rush), the reconstruction-time binding
 // map (turfwar, proposal (t)(1) — split-spec sources[].renameBindings), the
 // `of`/`in` KEYWORD-position guard in applyBindingMap (dune-arrakis, proposal
 // (x)), the TOKEN-BASED import-specifier extractor (embervale, proposal (ab) —
-// a text-level regex misreads UI copy as imports) and `recordCounts` (mindfall,
+// a text-level regex misreads UI copy as imports), `recordCounts` (mindfall,
 // proposal (af) — flat counts must count OCCURRENCES on the base token stream,
-// not name keys); nothing is read from another mirror at runtime.)
+// not name keys) and the SPREAD-CALL property-access guard (wonderforge —
+// `...HM(c)` is a CALL, not a property read; matching it demoted a clean
+// word-boundary rename to the index-addressed map); nothing is read from
+// another mirror at runtime.)
 //
 // A "rename layer" is what turns a prettified chunk range into a readable src/
 // slice. The campaign (tools/apply-names.mjs) renames a chunk's top-level
@@ -606,7 +612,11 @@ export function recoverSlice(range, committedBody) {
   // occurrence in the range, is never a property or object key, and is not the
   // ambiguous `c ? x : y` middle token.
   const isKey = (name) =>
-    new RegExp(`\\.\\s*${escapeRe(name)}\\b`).test(range) || new RegExp(`[{,]\\s*${escapeRe(name)}\\s*:`).test(range);
+    // A property access, but NOT the third dot of a spread operator: `...HM(c)`
+    // is a CALL, not a property read, and matching it demoted a clean
+    // word-boundary rename to the index-addressed map (wonderforge).
+    new RegExp(`(?<!\\.)\\.(?!\\.)\\s*${escapeRe(name)}\\b`).test(range) ||
+    new RegExp(`[{,]\\s*${escapeRe(name)}\\s*:`).test(range);
   const ambiguous = new Set();
   for (let i = 0; i < a.length; i++) {
     if (a[i].t !== "id") continue;
