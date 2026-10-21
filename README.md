@@ -298,7 +298,7 @@ readable/_player/hosted.pretty.js: 5 ranged slice(s) (7 section(s) in the recons
 check-chunk: 1 chunk(s), 5 slice body(ies) substituted — all cross-slice calls resolve
 
 $ node tools/refcheck.mjs          # no shadowing / duplicate / shorthand drift — clean
-$ node tools/derive.mjs --check    # re-derives in memory and compares — byte-identical
+$ node tools/derive.mjs --check    # re-derives in a throwaway scratch copy outside the mirror and compares with the committed tree — byte-identical, writes nothing
 $ node tools/audit.js
 AUDIT PASS — 8 spec sections (5/5 src↔pretty round-trips byte-exact through the recorded rename map, 5 renamed slice(s) re-proved from rename-map.json (1 indexed map(s) honest), 2/2 pretty sources tiled contiguously, 2/2 skipped IIFE-wrapper sections re-verified textually, 5/5 src slices + 1/1 readable/*.pretty.js parse standalone (node --input-type=module --check -), 2/2 pretties provably distinct from their capture source, 3/3 binary payload records match the capture bytes, 3 index-only wholeFile/skipped sections carry no src file, 0 inline content block(s) (no twins needed), 0/0 imports resolve inside the capture (0 whitelisted machinery), 2/2 pretties re-render byte-exact under pinned prettier 3.9.6, capture manifest free of derived layers)
 
