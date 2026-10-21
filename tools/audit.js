@@ -252,6 +252,39 @@ if (spec?.defaultFile) {
 const seen = new Set();
 const rangedFiles = new Set();
 const indexOnlyFiles = new Set();
+/**
+ * The capture a READING-COPY section names, or null when the section is not a
+ * sound reading-copy section.
+ *
+ * A reading-copy section records no `sourceFile`: its `file` IS the derived
+ * text (the readable pretty) and `origin` names the PRISTINE it was rendered
+ * from. The frozen export gate reads that shape as a LIVE capture-to-
+ * rendering comparison: the pristine is the capture, the derived text is the
+ * reading copy, so the two sides of the comparison are DIFFERENT files.
+ *
+ * The shape is accepted only when it is sound:
+ *   - it is a whole-file section and not a skipped tail;
+ *   - `origin` names a captured file, recorded in .upstream/manifest.json;
+ *   - `file` exists and IS a reading copy (a readable pretty) of that
+ *     capture, and the two are DIFFERENT files — a copy of the capture
+ *     would make the comparison a self-compare, which can only ever pass;
+ *   - the recorded range covers the reading copy it describes whole.
+ */
+function readingCopyCapture(s) {
+  if (!s || s.wholeFile !== true || s.skipped === true) return null;
+  const origin = typeof s.origin === "string" ? s.origin : null;
+  if (!origin) return null;
+  if (!manifest || !manifest.files || !manifest.files[origin]) return null;
+  if (typeof s.file !== "string") return null;
+  if (!/\.pretty\.(js|css)$/i.test(s.file)) return null;
+  const copyAbs = path.join(proj, ...s.file.split("/"));
+  const capAbs = path.join(proj, ...origin.split("/"));
+  if (!fs.existsSync(copyAbs) || !fs.existsSync(capAbs)) return null;
+  if (path.resolve(copyAbs) === path.resolve(capAbs)) return null;
+  const copyLines = getLines(copyAbs);
+  if (s.startLine !== 1 || s.endLine !== copyLines.length) return null;
+  return origin;
+}
 for (const s of sections) {
   if (!s.file) {
     problem("split-spec section without a file");
@@ -264,7 +297,23 @@ for (const s of sections) {
   if (isWhole && isSkipped) problem(`section ${s.file}: both wholeFile and skipped`);
   if (typeof s.startLine !== "number" || typeof s.endLine !== "number")
     problem(`section ${s.file}: no startLine/endLine range recorded`);
-  if (typeof s.sourceFile !== "string") problem(`section ${s.file}: no sourceFile provenance recorded`);
+  if (typeof s.sourceFile !== "string") {
+    // A whole-file section in the READING-COPY shape: its `file` IS the
+    // derived text (the readable pretty) and it names the PRISTINE it was
+    // rendered from (`origin`). There is no slice to cut, so it records no
+    // `sourceFile` — this is the shape the frozen export gate reads for a
+    // LIVE capture-to-rendering comparison. The carve-out accepts it only
+    // when the shape is SOUND, so nothing is let through that the old rule
+    // would have caught:
+    //
+    //   - it is a whole-file section that is not a skipped tail;
+    //   - `origin` names a captured file, recorded in .upstream/manifest.json;
+    //   - `file` exists and IS the reading copy of that capture (a .pretty.js
+    //     under readable/), and the two are DIFFERENT files;
+    //   - the recorded range covers the reading copy it describes whole.
+    const cap = isWhole && !isSkipped ? readingCopyCapture(s) : null;
+    if (!cap) problem(`section ${s.file}: no sourceFile provenance recorded`);
+  }
   if (isWhole || isSkipped) indexOnlyFiles.add(s.file);
   else rangedFiles.add(s.file);
 }

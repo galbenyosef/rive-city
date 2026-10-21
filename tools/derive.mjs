@@ -359,6 +359,36 @@ async function main() {
       if (stmts[i].startLine <= stmts[i - 1].endLine)
         throw new Error(`${rel}: statements ${i - 1}/${i} share a line — cannot slice at line boundaries`);
 
+    // ── the SERVED capture's own bytes for the wrapper regions ──────────
+    // The public-export-name gate cannot use a pristine that is not a .js
+    // file, and every section's sourceFile must be a readable pretty (the
+    // mirror's own audit pins that), so an index-only tail's pristine is
+    // always the reading copy. A tail that records NO text therefore falls
+    // back to the pristine's own lines: the pristine compared with itself, a
+    // comparison that can never fail. `text` breaks that tautology — it
+    // records the SERVED capture's own bytes for the tail's region, which is
+    // a different file from the pristine.
+    //
+    // The capture's own IIFE body statements give the byte offsets of the two
+    // wrapper regions (the opener ends where the body's first statement
+    // begins; the closer starts where the body's last statement ends).
+    const capDbg = await prettier.__debug.parse(text, { parser: "babel" });
+    const capTop = (capDbg.ast.program || capDbg.ast).body;
+    if (capTop.length !== 1 || capTop[0].type !== "ExpressionStatement")
+      throw new Error(`${rel}: capture is not a single top-level statement — shape changed`);
+    const capCall = capTop[0].expression;
+    if (!capCall || capCall.type !== "CallExpression")
+      throw new Error(`${rel}: capture top-level statement is not the IIFE call — shape changed`);
+    let capCallee = capCall.callee;
+    if (capCallee && capCallee.type === "ParenthesizedExpression") capCallee = capCallee.expression;
+    if (!capCallee || capCallee.type !== "FunctionExpression" || !capCallee.body)
+      throw new Error(`${rel}: capture IIFE callee is not a function expression — shape changed`);
+    const capBody = capCallee.body.body;
+    if (capBody.length !== bodyStmts.length)
+      throw new Error(`${rel}: capture carries ${capBody.length} IIFE body statement(s), the reading copy ${bodyStmts.length} — shape changed`);
+    const capOpenText = text.slice(0, capBody[0].start);
+    const capCloseText = text.slice(capBody[capBody.length - 1].end);
+
     // non-standalone wrapper lines: the IIFE opener (before the body's first
     // statement) and the `})();` closer (after the last one) -> skipped sections
     const openSec = {
@@ -368,6 +398,7 @@ async function main() {
       desc: `Lines 1-${stmts[0].startLine - 1} of ${sourceFile}. The IIFE opener \`(function () {\` and its \`"use strict";\` directive — non-standalone as a slice (the opener is an unterminated function expression), so it is indexed only; the body's declarations are the slices.`,
       A: 1,
       B: stmts[0].startLine - 1,
+      text: capOpenText,
     };
     const openText = lines.slice(0, openSec.B).join("\n");
     if (!openText.includes("(function") || !openText.includes('"use strict"'))
@@ -380,6 +411,7 @@ async function main() {
       desc: `Lines ${lastStmt.endLine + 1}-${lines.length} of ${sourceFile}. The IIFE invocation closer \`})();\` — non-standalone (it closes the wrapper opened on line 1), so it is indexed only.`,
       A: lastStmt.endLine + 1,
       B: lines.length,
+      text: capCloseText,
     };
     if (openSec.A > openSec.B || closeSec.A > closeSec.B)
       throw new Error(`${rel}: IIFE wrapper occupies no line range — shape changed`);
@@ -456,11 +488,32 @@ async function main() {
           sourceFile,
           firstLine: lines[b.A - 1],
           lastLine: lines[b.B - 1],
+          // the SERVED capture's own bytes for this region — the derived text
+          // the public-export-name gate compares against the pristine, so the
+          // tail is never rebuilt from the pristine's own lines.
+          ...(b.text ? { text: b.text } : {}),
         });
       }
     }
     slicedTotal += nn;
     skippedTotal += perFileSkipped;
+    // ── the READING-COPY shape: the served chunk is the pristine ─────────
+    // A whole-file section whose `file` IS the reading copy and whose
+    // `origin` names the capture is the shape the frozen export gate reads
+    // for a LIVE capture-to-rendering comparison: the gate walks the CAPTURE
+    // as the pristine and the reading copy as the derived text, so a change
+    // to the served code is caught. It records no `sourceFile`: the reading
+    // copy IS the derived text and there is no slice to cut out of it.
+    sections.push({
+      file: sourceFile,
+      wholeFile: true,
+      origin: rel,
+      title: `${tag} — served chunk (reading copy, whole-file)`,
+      desc: `Lines 1-${lines.length} of ${sourceFile}. The reading copy of the served chunk ${rel} — the whole capture, rendered. Recorded in the READING-COPY shape: the PRISTINE is the captured chunk (${rel}) and the DERIVED text is this reading copy, so the public-export-name gate compares the served file's own export table with the reading copy's — two different files, not a file with itself.`,
+      note: `whole-file (reading-copy shape): the pristine is the captured chunk (${rel}), the derived text is the reading copy`,
+      startLine: 1,
+      endLine: lines.length,
+    });
     // the authored app rules that actually fired (evidence: their targets appear
     // in this chunk's recorded map) -> the chunk-level binding map recorded in
     // the spec, used by the reconstruction gates for index-only skipped sections.
@@ -710,6 +763,9 @@ async function main() {
   let bad = 0;
   const bySource = new Map();
   for (const s of sections) {
+    // the reading-copy shape records no sourceFile (the reading copy IS the
+    // derived text): it owns no range of any pretty and is not tiled.
+    if (typeof s.sourceFile !== "string") continue;
     if (!bySource.has(s.sourceFile)) bySource.set(s.sourceFile, []);
     bySource.get(s.sourceFile).push(s);
   }
