@@ -71,6 +71,8 @@ reference is left uncaptured.
 - `tools/update.mjs` — read-only drift probe against the live origin
 - `tools/verify.mjs` — re-hash the capture against the manifest
 - `tools/audit.js` — integrity gate for the derived layers (`AUDIT PASS`)
+- `tools/check-links.mjs` — link gate: every scope of the derived layer exports
+  only names the layer declares
 - `tools/serve.mjs` — loopback static server for the serve/boot probe
 - `legacy/2026-10-14/` — the superseded flattened derived layers (pre served-path)
 - `_mirror-report.json` — capture record (requests, fetches, external gaps)
@@ -108,8 +110,23 @@ node tools/audit.js              # derived-layer integrity gate (AUDIT PASS)
 node tools/verify-rename.mjs --all   # every slice reproduces through rename-map.json
 node tools/check-chunk.mjs --all     # cross-slice calls still resolve after renames
 node tools/check-exports.mjs     # the derived layer still exports every public name
+node tools/check-links.mjs       # every scope of the derived layer exports only names the layer declares
 node tools/derive.mjs            # re-cut readable/ + src/ + split-spec.json (reproducible)
 ```
+
+`check-links.mjs` guards the one class the export-name gate cannot see: a
+layer file whose export statement names a binding the layer never declares is
+a hard SyntaxError at link time, and the file cannot be imported at all. The
+layer here is a CLASSIC-SCRIPT layer — five slices cut from one readable
+module, the body of a single IIFE, with the wrapper's opening and closing
+recorded as skipped sections — and it carries no export statement anywhere, so
+the class is structurally absent today and the gate says so (1 scope, 0 export
+tables). It is deployed because it is this mirror's only watch on the export
+side of the layer, and it fires the moment a slice carries an export table
+that names a binding the module does not declare. The gate also knows the
+mirror's capture: a file at the mirror root that the capture manifest claims
+is the served capture, never a layer file.
+
 
 ## Updating from upstream
 
