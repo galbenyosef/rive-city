@@ -339,6 +339,15 @@ Serve probe: all 6 served paths over HTTP 200 with exact capture byte counts
   refreshed: a mirror is a point-in-time snapshot, and the 40 semantic names
   are bound to the captured bytes.
 
+## Boot test (2026-10-27)
+
+- Entry: `http://127.0.0.1:4925/` served by `tools/serve.mjs` with the network blocked (`MAP * 127.0.0.1`).
+- Outcome: **blocked** — the status overlay stayed on its error state reading "This animation could not be loaded." and the canvas remained at its default size; the CDN runtime never loaded.
+- Evidence: body 35 chars (the error string, not content); canvas 300x150 (default, never sized by the player); 0 console errors; 0 failed same-origin requests, 1 blocked cross-origin (`https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.x.x/rive.js`, transferSize 0); screenshot `docs/boot-2026-10-27.png`.
+- Gaps seen: none — `/`, `/_player/hosted.css`, `/_player/hosted.js`, `/_player/favicon.ico` and `/file.riv` all loaded 200 from the capture; the only failure is the documented CDN `rive.js`, which is expected under the offline rule.
+
+This confirms the mirror's standing claim: the capture is complete (the 29.6 MB scene loads locally) but the page cannot boot its Rive runtime without internet, because `rive.js` stays a CDN dependency. The 2026-10-12 online boot record below still stands; this test only proves the offline boundary.
+
 ## Mirror conventions
 
 - **Capture layer** — the captured files are byte-exact copies of what the origin
