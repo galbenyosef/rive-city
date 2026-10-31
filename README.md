@@ -346,7 +346,74 @@ Serve probe: all 6 served paths over HTTP 200 with exact capture byte counts
 - Evidence: body 35 chars (the error string, not content); canvas 300x150 (default, never sized by the player); 0 console errors; 0 failed same-origin requests, 1 blocked cross-origin (`https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.x.x/rive.js`, transferSize 0); screenshot `docs/boot-2026-10-27.png`.
 - Gaps seen: none — `/`, `/_player/hosted.css`, `/_player/hosted.js`, `/_player/favicon.ico` and `/file.riv` all loaded 200 from the capture; the only failure is the documented CDN `rive.js`, which is expected under the offline rule.
 
-This confirms the mirror's standing claim: the capture is complete (the 29.6 MB scene loads locally) but the page cannot boot its Rive runtime without internet, because `rive.js` stays a CDN dependency. The 2026-10-12 online boot record below still stands; this test only proves the offline boundary.
+This confirms the mirror's standing claim: the capture is complete (the 29.6 MB scene loads locally) but the page cannot boot its Rive runtime without internet, because `rive.js` stays a CDN dependency. The 2026-10-12 online boot record above still stands; this test only proves the offline boundary.
+
+### 2026-10-31 drift probe + offline boot — refused refresh (trust gate)
+
+Census: **1 changed of 6 checked, 0 missing**. The changed file is
+`_player/hosted.js` — a third upstream rebuild of the player glue, and **not**
+rotating noise: it is 10 950 B / sha `c43cf207…` against the captured 10 132 B /
+`b2395675…` (`last-modified Sat, 24 Oct 2026 04:30:01 GMT`, CloudFront/S3,
+`content-type: application/javascript`). The other five files are byte-identical
+upstream, `index.html` included, so this is not a soft-404 shell or a
+nonce-token artifact.
+
+What the rebuilt glue actually adds (532 readable lines vs 496, pinned prettier,
+idempotent): a **runtime loader** — `B()` walks jsdelivr candidates and `T()`
+injects a `<script>` (prefers `@rive-app/webgl2-threads@2.x.x` when
+`window.crossOriginIsolated`, honours a `?runtime=x.y.z` pin, falls back on
+`onerror`); `focusOptions: { allowFocusInterrupt: true }` plus a
+`canvas.focus({preventScroll})` on load; and `data-muted` support that holds
+`volume = 0` until a **trusted** pointerdown/keydown. Real feature drift, not a
+minifier short-name reshuffle.
+
+**Nothing was written.** The mandatory trust gate is not satisfiable for this
+capture: a dry run against the live origin reproduces **5/6 files byte-for-byte**
+(`file.riv` 29 616 149 B, `_player/drawer.riv` 9 513 B, `_player/favicon.ico`
+15 086 B, `_player/hosted.css` 5 903 B, `index.html` 908 B — the capture path is
+faithful), but `_player/hosted.js` is **still served and no longer matches the
+current capture**, which is precisely the gate's stop condition. The blocker is
+structural, not a missing tool: the derived layer is bound to the captured bytes.
+Re-deriving the refreshed file with the mirror's own tool fails hard —
+
+```
+$ node tools/derive.mjs
+Error: rename map addresses token 278 as "x" but the range has id("k")
+```
+
+`rename-map.json` (75 word-boundary records + 1 token-index record) and the
+`split-spec.json` section ranges (cut against the 496-line pretty) are keyed on the
+old build's identifiers, and `tools/names.json`'s 40 semantic names are authored
+against them. Refreshing `hosted.js` therefore requires **re-authoring the rename
+campaign**, not a mechanical re-cut; a silent re-cut would mis-bind names and
+would fail `audit.js`/`verify-rename.mjs`. Consistent with the mirror's
+point-in-time policy (2026-10-20 entry: a rebuild is recorded, not absorbed), the
+capture stays at the 2026-10-12 bytes and the drift is documented here.
+
+Gates on the untouched tree (2026-10-31):
+
+```
+$ node tools/verify.mjs                 -> 6 files checked, 0 problems
+$ node tools/audit.js                   -> AUDIT PASS (9 spec sections)
+$ node tools/verify-rename.mjs --all    -> 5/5 slices reproduce byte-exact, references/bindings YES
+$ node tools/check-chunk.mjs --all      -> 5 slices substituted, cross-slice calls resolve
+$ node tools/check-exports.mjs          -> 0 export tables, no public name lost
+$ node tools/check-links.mjs            -> every export table names a declared binding: YES
+$ node tools/refcheck.mjs               -> clean
+$ node tools/derive.mjs --check         -> DERIVE CHECK PASS (scratch copy inside the workspace tmp/, nothing written)
+$ node tools/record-manifest.mjs --check -> PASS, 6 capture files, no derived path leaked
+```
+
+Offline boot (2026-10-31): served by `tools/serve.mjs` on
+`http://127.0.0.1:4747/`, headless Chromium with
+`--host-resolver-rules="MAP * 127.0.0.1"`. All six capture paths answered
+HTTP 200 with exact capture byte counts. Outcome: **blocked as expected** — body
+text 45 chars (`rive-city This animation could not be loaded.`), `<canvas
+data-src="/file.riv">` still unsized (no `width`/`height`, default 300×150), no
+`#rive-drawer` mounted, because the CDN `rive.js` runtime is unreachable with the
+network mapped away. The listener was stopped and port 4747 proven closed
+(`netstat` no LISTENING, `curl` exit 000). Evidence:
+`docs/boot-2026-10-31-refresh.png`.
 
 ## Mirror conventions
 
