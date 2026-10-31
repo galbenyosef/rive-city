@@ -436,3 +436,8 @@ network mapped away. The listener was stopped and port 4747 proven closed
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 290 | rive-city | mirror | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
 <!-- mirror-status:end -->
+
+
+## Snapshot policy (2026-10-31)
+
+Frozen point-in-time snapshot - deliberate, fleet decision 2026-10-31. _player/hosted.js rebuilt (new runtime loader); rename-map.json, split-spec.json and tools/names.json are keyed to the old build's token positions and derive fails hard on the new bytes. The capture stays byte-exact and boots offline; a refresh needs a full re-capture/re-derive campaign (a new mirror, not a refresh), so the mirror is declared frozen rather than left looking stale. Re-review if the origin serves the old build again.
